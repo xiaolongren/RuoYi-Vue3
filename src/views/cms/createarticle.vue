@@ -1,38 +1,79 @@
 <template>
     <div style="display: flex; flex-direction: row;width: 100%; ">
-        <div style="margin-left: 220px;width: 50%;margin-top: 30px;">
+        <!-- 左边 -->
+        <div style="width:360px;margin-top: 30px;">
             <Toolbar style="border-bottom: 1px solid #ccc" :editor="editorRef" :defaultConfig="toolbarConfig"
                 :mode="mode" />
+
+            <textarea @input="handleTitleInput" id="tvtitle" class="textarea" style="max-lines: 1;margin-top: 35px;"
+                placeholder="请输入标题"></textarea>
+
+
             <Editor style="height: 500px; verflow-y: hidden; border-color: #ccc; border-width: 1px;" v-model="valueHtml"
-                :defaultConfig="editorConfig" :mode="mode" @onCreated="handleCreated" />
+                :defaultConfig="editorConfig" :mode="mode" @onChange="onchange" @onCreated="handleCreated" />
         </div>
-        <div style="background-color: #ccc;width: 1px;margin-top: 69px; margin-left: 10px;">
+        <div style="background-color: #ccc;width: 1px;margin-top: 49px; margin-left: 10px;">
 
         </div>
-        <div style="margin-left: 10px;display: flex; flex-direction: column;">
-            <textarea id="tvtitle" class="textarea" style="max-lines: 1;margin-top: 35px;">请输入标题</textarea>
+        <!-- 中间 -->
+        <div style="display: flex;flex-direction: column;margin-left: 16px;;margin-top: 40px;">
             <div class="coverdiv" @click="selectCover">
-                <input style="z-index: -2;width: 300px;height: 200px; visibility: hidden;" class="hidden" id="input"
+                <input style="z-index: -2;width: 210px;height: 140px; visibility: hidden;" class="hidden" id="input"
                     type="file" accept="image/*" @change="previewFiles($event)">
 
 
-                <div style="width: 300px;height: 200px;position: absolute;left: 0px;top: 0px;">
-                    <img id="ivcover" width="300" height="200" style="padding: 0px; text-align:center;" />
+                <div style="width: 210px;height: 140px;position: absolute;left: 0px;top: 0px;">
+                    <img id="ivcover" width="210" height="140" style="padding: 0px; text-align:center;" />
 
                 </div>
                 <div id="tips"
-                    style="text-align:center;z-index: 0;width: 300px;line-height: 200px; height: 200px; position: absolute;left: 0px;top: 0px; color: black;font-size: 14px;">
-                    <p style="font-size: 12px;">
-                        点击上传封面图片 最佳尺寸 600x400(长宽度比3:2)
-                    </p>
+                    style="text-align:center;z-index: 0;width: 210px;line-height: 140px; height: 140px; position: absolute;left: 0px;top: 0px; color: black;font-size: 6px; ">
+                    添加封面图<span style="font-size: 18px;">+</span>
+
                 </div>
 
             </div>
-            <button title="提交" @click="submitarticle" style="margin-top: 16px
-                                            ; width: 300px;">提交</button>
+            <p style="font-size: 10px;"> 封面图片最佳尺寸600x400(长宽度比3:2)
+            </p>
+            <el-icon style="font-size: 12px;" name="el-icon-plus"></el-icon>
+
+
+
+
+            <el-button type="primary" style="margin-top: 16px
+                                            ; width: 210px;" @click="submitarticle">提交</el-button>
+        </div>
+        <div style="margin-left: 10px;display: flex; flex-direction: column;">
+            <div style="height: 40px; "></div>
+            <div class="phone-preview">
+                <div class="phone-frame">
+
+                    <slot>
+                        <div style="margin-left: 10px;margin-right: 10px;margin-top: 8px;">
+                            <div id="articletitle">{{ mtitle }}</div>
+                            <div style="font-size: 12px;color: rgb(90, 85, 85);margin-top: 8px;">{{ getNowTime() }}</div>
+
+                            <div v-html="valueHtml" id="content"></div>
+                        </div>
+
+                        <!-- 其他要显示的内容 -->
+                    </slot>
+
+
+
+                </div>
+            </div>
 
         </div>
 
+        <el-dialog title="提示" v-model="centerDialogVisible" width="30%" center>
+            <span>{{ publishResult }}</span>
+            <span slot="footer" class="dialog-footer">
+                <div class="button-container">
+                    <el-button type="primary" @click="centerDialogVisible = false">确 定</el-button>
+                </div>
+            </span>
+        </el-dialog>
     </div>
 </template>
 
@@ -40,6 +81,7 @@
 import '@wangeditor/editor/dist/css/style.css' // 引入 css
 import { createEditor, DomEditor } from '@wangeditor/editor'
 import httpRequest from '@/store/maxios.js'
+import { formatTimestampYMDHS } from '@/utils/dateutil.js'
 
 import { onBeforeUnmount, ref, shallowRef, onMounted, render } from 'vue'
 import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
@@ -61,8 +103,8 @@ export default {
         const Region = 'ap-guangzhou';     /* 存储桶所在地域，必须字段 */
 
         // 初始化实例
-      // 初始化实例
-      const cos = new COS({
+        // 初始化实例
+        const cos = new COS({
             // getAuthorization 必选参数
             getAuthorization: function (options, callback) {
                 // 初始化时不会调用，只有调用 cos 方法（例如 cos.putObject）时才会进入
@@ -78,7 +120,9 @@ export default {
                     try {
                         var data = JSON.parse(e.target.responseText);
                         var credentials = data.credentials;
+                        console.log('token:' + credentials)
                     } catch (e) {
+                        console.log(e)
                     }
                     if (!data || !credentials) {
                         return console.error('credentials invalid:\n' + JSON.stringify(data, null, 2))
@@ -104,6 +148,7 @@ export default {
         const contentPicUploadCallback = (data, insertImgFn) => {
             var filetype = getFileType(data.Location)
             var url = data.Location.replace("xiyou-1314793197.cos.ap-guangzhou.myqcloud.com", "https://pic.xiyouqingsu.com").replace("." + filetype, ".webp")
+            console.log("url:" + url);
             insertImgFn(url); // 插入返回的url地址
             //获取图片尺寸
             getPicSize(url).then(res => {
@@ -128,19 +173,24 @@ export default {
 
         const customUploadImg = (file, insertImgFn) => {
             console.log(file)
+            var fileName = new Date().getTime() + file.name;
 
             cos.sliceUploadFile({
                 Bucket: 'xiyou-1314793197', // 存储桶名称
                 Region: 'ap-guangzhou', // 存储桶地域
-                Key: 'article/' + file.name, // 文件名称
+                Key: 'article/' + fileName, // 文件名称
                 Body: file, // 文件
             }, function (err, data) {
+                console.log(data);
                 if (err) {
                     console.log(err);
                     return;
                 }
+                setTimeout(function () {
+                    contentPicUploadCallback(data, insertImgFn)
 
-             //  contentPicUploadCallback(data, insertImgFn)
+                }, 2000);
+
 
             });
         }
@@ -149,11 +199,12 @@ export default {
 
             var coverdiv = document.getElementById("tips")
             coverdiv.style.visibility = "hidden"
+            var fileName = new Date().getTime() + file.name;
 
             cos.sliceUploadFile({
                 Bucket: 'xiyou-1314793197', // 存储桶名称
                 Region: 'ap-guangzhou', // 存储桶地域
-                Key: 'article/' + file.name, // 文件名称
+                Key: 'article/' + fileName, // 文件名称
                 Body: file, // 文件
             }, function (err, data) {
                 if (err) {
@@ -244,8 +295,9 @@ export default {
         const valueHtml = ref('<p>hello</p>')
         const picWidthMap = new Map
         const picHeightMap = new Map
-
-
+        const editorContent = ""
+        const centerDialogVisible = ref(false);
+        const publishResult = ref('');
 
         // 模拟 ajax 异步获取内容
         onMounted(() => {
@@ -257,7 +309,8 @@ export default {
                 const curToolbarConfig = toolbar?.getConfig()
                 console.log(JSON.stringify(curToolbarConfig?.toolbarKeys))// 当前菜单排序和分组
 
-                valueHtml.value = '<p>模拟 Ajax 异步设置内容</p>'
+                valueHtml.value = '<p></p>'
+
 
                 editorRef.value.getMenuConfig("uploadImage").customUpload = customUploadImg;
 
@@ -323,7 +376,15 @@ export default {
         })
 
         const handleCreated = (editor) => {
+            console.log("handleCreated");
             editorRef.value = editor // 记录 editor 实例，重要！
+
+
+
+        }
+        const onchange = (value) => {
+
+            //  this.editorContent=value.getHtml();
         }
 
         //选择封面
@@ -368,19 +429,25 @@ export default {
                 return
             }
 
-            const editor = editorRef.value
             //获取内容
-            var content = editor.getHtml()
+            var content = valueHtml.value
+            if (content.length < 100) {
+
+                alert("文章内容太短")
+                return
+            }
+
             var title = document.getElementById('tvtitle').value;
             ariticle["title"] = title
             ariticle["content"] = content
+
 
             //从html中解析img，过滤掉picMap被删除的pic
 
 
 
             let imgStrs = content.match(/<img.*?>/g)
-            console.log("imgStrs:"+imgStrs)
+            console.log("imgStrs:" + imgStrs)
 
             // 获取每个img url
             if (imgStrs != null) {
@@ -388,7 +455,7 @@ export default {
                     return url.match(/\ssrc=['"](.*?)['"]/)[1]
                 }
                 )
-                console.log("urls:"+urls);
+                console.log("urls:" + urls);
 
                 for (var i = 0; i < urls.length; i++) {
                     console.log("src:::" + urls[i]);
@@ -408,10 +475,10 @@ export default {
 
 
             if (PICS.size > 0) {
-                ariticle.imgs= PICS
+                ariticle.imgs = PICS
             }
-            ariticle.isOriginal=1
-            ariticle.coverPic= CoverPic
+            ariticle.isOriginal = 1
+            ariticle.coverPic = CoverPic
 
             console.log(JSON.stringify(ariticle))
             var form = new FormData();
@@ -425,18 +492,32 @@ export default {
                     uid: global.uid
                 }
             };
-            // httpRequest.post(url, form, config).then(ret => {
-            //     console.log(ret.data);
-            //    // this.users = ret.data;
-            // })
+            httpRequest.post(url, form, config).then(ret => {
+                centerDialogVisible.value = true;
+                publishResult.value = "发布成功";
+                resetData()
 
+            })
 
+        }
+        const resetData = () => {
+            editorRef.value.clear();
 
+            document.getElementById('tvtitle').value = "";
+            CoverPic = {};
+            ariticle = {};
+            valueHtml.value = '<p></p>';
+            document.getElementById("ivcover").src = "data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs="; // 透明的图片
+            document.getElementById("articletitle").innerHTML = ""; // 
+            document.getElementById("content").innerHTML = ""; // 
 
 
         }
 
         return {
+            resetData,
+            publishResult,
+            editorContent,
             editorRef,
             valueHtml,
             mode: 'default', // 或 'simple'
@@ -448,6 +529,8 @@ export default {
             handleCreated,
             submitarticle,
             previewFiles,
+            onchange,
+            centerDialogVisible,
 
 
         };
@@ -460,26 +543,38 @@ export default {
     data() {
 
         return {
+
             cos: null,
-            mvisible: false
+            mvisible: false,
+            mtitle: "",
         }
 
     },
     methods: {
 
+        handleTitleInput(ev) {
+            console.log(ev.target.value);
+            this.mtitle = ev.target.value;
+
+        }
+        ,
+        getNowTime() {
+
+            return formatTimestampYMDHS(Date.now())
+        },
         selectCover() {
             var form = new FormData();
             form.append("uid", this.global.uid)
             form.append("token", this.global.token)
             // form.append("articleJson", JSON.stringify(ariticle))
-            var url = "/content/article/createArticle"
+            // var url = "/content/article/createArticle"
             //url="/usergroup/user/login/passwdLogin"
             var url = 'https://app.xiyouqingsu.com/content/article/createArticle'; // url 替换成您自己的后端服务
 
-            var xmlrequest = new XMLHttpRequest();
-             xmlrequest.open("POST",url,true)
-             xmlrequest.send(form)
-            xmlrequest.send("uid=377&token=c2d2a2dc65a709d5bfd755bfc66917ec")
+            // var xmlrequest = new XMLHttpRequest();
+            //xmlrequest.open("POST", url, true)
+            // xmlrequest.send(form)
+            // xmlrequest.send("uid=377&token=c2d2a2dc65a709d5bfd755bfc66917ec")
             document.getElementById("input").click();
 
         }
@@ -493,10 +588,11 @@ export default {
     resize: none;
     max-lines: 1;
     font-family: Tahoma, Arial, 宋体;
-    width: 400px;
+    width: 100%;
 
-    font-size: 8pt;
+    font-size: 16pt;
     line-height: 15px;
+    font-weight: bold;
 
     COLOR: #000000;
 
@@ -525,11 +621,54 @@ export default {
 
 .coverdiv {
     background-color: gainsboro;
-    width: 300px;
-    height: 200px;
+    width: 210px;
+    height: 140px;
     position: relative;
     margin-top: 10px;
     align-items: center;
+}
+
+.phone-preview {
+    position: relative;
+    width: 330px;
+    /* 手机屏幕的宽度 */
+    height: 620px;
+    /* 手机屏幕的高度 */
+    margin: 0 auto;
+    /* 居中显示 */
+    overflow: hidden;
+    /* 隐藏超出部分 */
+    background-color: #000;
+    /* 手机外壳的颜色 */
+    border-radius: 20px;
+    /* 圆角的大小 */
+
+}
+
+.phone-frame {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 320px;
+    /* 手机屏幕内容区域的宽度 */
+    height: 568px;
+    /* 手机屏幕内容区域的高度 */
+    background-color: #fff;
+    /* 手机屏幕的颜色 */
+    overflow: auto;
+    /* 如果内容溢出可滚动 */
+}
+
+.dialog-footer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.button-container {
+    margin-top: 10px;
+    /* 调整按钮容器与对话框底部的间距 */
 }
 </style>
 

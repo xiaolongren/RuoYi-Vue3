@@ -42,8 +42,13 @@ import ImagePreview from "@/components/ImagePreview"
 import TreeSelect from '@/components/TreeSelect'
 // 字典标签组件
 import DictTag from '@/components/DictTag'
-
-const app = createApp(App)
+const global = {
+  uid:383,
+  token:"cef311957a64f9268f54fdfe59f0dbe7"
+ 
+};
+//
+const app = createApp(App).provide('global', global)
 
 // 全局方法挂载
 app.config.globalProperties.useDict = useDict

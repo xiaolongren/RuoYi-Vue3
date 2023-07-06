@@ -25,7 +25,7 @@
     </el-form> -->
     <el-table v-loading="loading" :data="list.slice((pageNum - 1) * pageSize, pageNum * pageSize)" style="width: 100%;">
       <el-table-column label="序号" type="index" align="center">
-        <template slot-scope="scope">
+        <template v-slot="scope">
           <span>{{ (pageNum - 1) * pageSize + scope.$index + 1 }}</span>
         </template>
       </el-table-column>
@@ -35,7 +35,7 @@
       <el-table-column label="时间" align="center" prop="createTime" :show-overflow-tooltip="true" />
 
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
-        <template slot-scope="scope">
+        <template v-slot="scope">
           <el-button size="mini" type="text" @click="mpassRequestListener(scope.row)">审核通过</el-button>
 
           <el-button size="mini" type="text" @click="mrefuseRequestListener(scope.row)">不通过</el-button>

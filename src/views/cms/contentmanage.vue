@@ -10,8 +10,8 @@
                             :value="item.value" :disabled="item.disabled"></el-option>
                     </el-select>
                 </el-form-item>
-                <el-form-item label="评论内容" prop="field105">
-                    <el-input v-model="formData.field105" placeholder="请输入评论内容" clearable :style="{ width: '100%' }">
+                <el-form-item label="内容关键字" prop="field105">
+                    <el-input v-model="formData.field105" placeholder="请输入内容关键字" clearable :style="{ width: '100%' }">
                     </el-input>
                 </el-form-item>
                 <el-form-item label="用户Id" prop="field104">
@@ -49,7 +49,7 @@
     </div>
 </template>
 <script>
-import { searchComment,deleteComment } from "@/api/cms/comment";
+import { searchContent } from "@/api/cms/content.js";
 import { formatTimestamp } from '@/utils/dateutil.js';
 
 
@@ -87,13 +87,23 @@ export default {
                     trigger: 'change'
                 }],
                 field105: [{
-                    required: true,
+                    required: false,
                     message: '请输入评论内容',
                     trigger: 'blur'
                 }],
                 field104: [{
-                    required: true,
+                    required: false,
                     message: '请输入用户Id',
+                    trigger: 'blur'
+                }, {
+                    validator: (rule, value, callback) => {
+                        const regex = /^\d+$/; // 正则表达式，匹配数字
+                        if (value!=null&&!regex.test(value)) {
+                            callback(new Error('请输入有效的用户ID(数字)'));
+                        } else {
+                            callback();
+                        }
+                    },
                     trigger: 'blur'
                 }],
             },
@@ -117,7 +127,7 @@ export default {
                 pageSize: 10,
                 keyword: "",
                 contentType: "",
-                targetUid: "",
+                targetUid: 0,
             },
         }
     },
@@ -131,18 +141,25 @@ export default {
             return formatTimestamp(timestamp)
         },
         submitForm() {
+            var uid=this.formData.field104;
+            var keyword=this.formData.field105;
+            if ((uid==null||uid.trim().length == 0) &&(keyword==null|| keyword.trim().length == 0)) {
+                alert("用户id和内容关键字至少一个不为空")
+
+                return
+            }
             this.$refs['elForm'].validate(valid => {
                 if (!valid) return
 
                 this.queryParams.page = this.pageNum,
-                    this.queryParams.targetUid = this.formData.field104
+                this.queryParams.targetUid = this.formData.field104==null?"0":this.formData.field104
                 this.queryParams.contentType = this.formData.field103
-                this.queryParams.keyword = this.formData.field105,
-                    // alert(JSON.stringify(this.queryParams) ),
-
-                    searchComment(this.queryParams).then(response => {
-                        this.loading = false;
+                this.queryParams.keyword = this.formData.field105==null?"":this.formData.field105,
  
+
+                    searchContent(this.queryParams).then(response => {
+                        this.loading = false;
+
                         if (response && response.rows) {
                             this.list = response.rows;
                             this.total = response.total;
@@ -158,8 +175,8 @@ export default {
             this.$refs['elForm'].resetFields()
         },
         mdelete(row) {
-           
-            return  deleteComment(row.idData,this.formData.field103).then(value => {
+
+            return deleteComment(row.idData, this.formData.field103).then(value => {
                 if (value.errorCode == 0) {
                     let index = this.list.indexOf(row); // 查找元素的索引
                     if (index !== -1) {
