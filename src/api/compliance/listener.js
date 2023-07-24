@@ -9,21 +9,21 @@ export function getWaiting4ReviewListener() {
   })
 }
 
-// 审核通过
-export function passRequestListener(pkid) {
+// // 审核通过
+// export function passRequestListener(pkid) {
 
+//   return request({
+//     url: '/compliance/pk/passPKTopic',
+//     method: 'post',
+//     params:{'id':pkid+""}
+//    })
+// }
+export function verifyFail(id,msg) {
+  console.log(id);
   return request({
-    url: '/compliance/pk/passPKTopic',
-    method: 'post',
-    params:{'id':pkid+""}
-   })
-}
-export function refuseRequestListener(pkid,msg) {
-  console.log(pkid);
-  return request({
-    url: '/compliance/pk/refusePKTopic' ,
-    method: 'post',
-    params:{'id':pkid+"",'msg':msg}
+    url: '/compliance/listener/verifyFail' ,
+    method: 'get',
+    params:{'listenerRequestId':id+"",'msg':msg}
   })
 }
 export function verifyIdCard(listenerRequestId){

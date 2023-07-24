@@ -81,7 +81,7 @@
 import '@wangeditor/editor/dist/css/style.css' // 引入 css
 import { createEditor, DomEditor } from '@wangeditor/editor'
 import httpRequest from '@/store/maxios.js'
-import { formatTimestampYMDHS } from '@/utils/dateutil.js'
+import { formatTimestamp ,formatTimestampYMDHS} from '@/utils/dateutil.js';
 
 import { onBeforeUnmount, ref, shallowRef, onMounted, render } from 'vue'
 import { Editor, Toolbar } from '@wangeditor/editor-for-vue'

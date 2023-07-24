@@ -32,11 +32,14 @@
       <el-table-column label="用户" align="center" prop="userVo.nick" :show-overflow-tooltip="true" />
       <el-table-column label="PK话题" align="center" prop="title" :show-overflow-tooltip="true" />
       <el-table-column label="观点" align="center" prop="redStandpoint" />
-      <el-table-column label="时间" align="center" prop="createTime" :show-overflow-tooltip="true" />
-
+      <el-table-column label="时间" align="center" :show-overflow-tooltip="true">
+                <template v-slot="scope">
+                    {{ mformatTimestamp(scope.row.createTime) }}
+                </template>
+            </el-table-column>
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
         <template v-slot="scope">
-          <el-button size="mini" type="text" @click="mpassRequestListener(scope.row)">审核通过</el-button>
+          <el-button size="mini" type="text" @click="mpassRequestListener(scope.row)">通过</el-button>
 
           <el-button size="mini" type="text" @click="mrefuseRequestListener(scope.row)">不通过</el-button>
         </template>
@@ -49,6 +52,7 @@
 
 <script>
 import { getWaiting4ReviewPKTopics, passRequestListener, refuseRequestListener } from "@/api/compliance/pk";
+ import { formatTimestamp ,formatTimestampYMDHS} from '@/utils/dateutil.js';
 
 export default {
   name: "Online",
@@ -74,6 +78,10 @@ export default {
   },
   methods: {
     /** 查询登录日志列表 */
+    mformatTimestamp(timestamp) {
+
+return formatTimestamp(timestamp)
+},
     getList() {
       this.loading = true;
       getWaiting4ReviewPKTopics(this.queryParams).then(response => {
@@ -112,7 +120,7 @@ export default {
         inputErrorMessage: '请输入未通过审核意见'
       }).then(({ value }) => {
 
-        passRequestListener(row.idData, value).then((value) => {
+        refuseRequestListener(row.idData, value).then((value) => {
           if (value['errorCode'] == 0) {
             let index = this.list.indexOf(row); // 查找元素的索引
             if (index !== -1) {

@@ -50,7 +50,7 @@
 </template>
 <script>
 import { searchComment,deleteComment } from "@/api/cms/comment";
-import { formatTimestamp } from '@/utils/dateutil.js';
+import { formatTimestamp ,formatTimestampYMDHS} from '@/utils/dateutil.js';
 
 
 export default {
@@ -63,6 +63,7 @@ export default {
     // PK_COMMENT(7,"pk观点"),
     // ARTICLE(8,"文章");
     components: {},
+    inject: ['global'],
     props: [],
     data() {
         return {
@@ -158,8 +159,14 @@ export default {
             this.$refs['elForm'].resetFields()
         },
         mdelete(row) {
+            var query={
+                'id': row.idData,
+                'contentType':this.formData.field103 ,
+                'uid':this.global.uid,
+                'token':this.global.token
+            }
            
-            return  deleteComment(row.idData,this.formData.field103).then(value => {
+            return  deleteComment(query).then(value => {
                 if (value.errorCode == 0) {
                     let index = this.list.indexOf(row); // 查找元素的索引
                     if (index !== -1) {

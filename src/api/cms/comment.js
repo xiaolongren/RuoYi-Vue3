@@ -8,10 +8,10 @@ export function searchComment(query) {
         params: query
     })
 }
-export function deleteComment(id,contentType) {
+export function deleteComment(query) {
      return request({
         url: '/cms/comment/deleteCommentBySys',
         method: 'get',
-        params: { 'id': id + "",'contentType':contentType }
+        params: query
     })
 }

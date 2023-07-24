@@ -1,28 +1,6 @@
 <template>
   <div class="app-container">
-    <!-- <el-form :model="queryParams" ref="queryForm" size="small" :inline="true" label-width="68px">
-      <el-form-item label="登录地址" prop="ipaddr">
-        <el-input
-          v-model="queryParams.ipaddr"
-          placeholder="请输入登录地址"
-          clearable
-          @keyup.enter.native="handleQuery"
-        />
-      </el-form-item>
-      <el-form-item label="用户名称" prop="userName">
-        <el-input
-          v-model="queryParams.userName"
-          placeholder="请输入用户名称"
-          clearable
-          @keyup.enter.native="handleQuery"
-        />
-      </el-form-item>
-      <el-form-item>
-        <el-button type="primary" icon="el-icon-search" size="mini" @click="handleQuery">搜索</el-button>
-        <el-button icon="el-icon-refresh" size="mini" @click="resetQuery">重置</el-button>
-      </el-form-item>
-
-    </el-form> -->
+    
     <el-table v-loading="loading" :data="list.slice((pageNum - 1) * pageSize, pageNum * pageSize)" style="width: 100%;">
       <el-table-column label="序号" type="index" align="center">
         <template v-slot="scope">
@@ -31,8 +9,11 @@
       </el-table-column>
       <el-table-column label="用户ID" align="center" prop="uid" :show-overflow-tooltip="true" />
       <el-table-column label="用户昵称" align="center" prop="name" :show-overflow-tooltip="true" />
-      <el-table-column label="时间" align="center" prop="createTime" :show-overflow-tooltip="true" />
-
+      <el-table-column label="时间" align="center" :show-overflow-tooltip="true">
+        <template v-slot="scope">
+          {{ mformatTimestamp(scope.row.createTime) }}
+        </template>
+      </el-table-column>
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
         <template v-slot="scope">
           <el-button size="mini" type="text" @click="openDialog(scope.row)">审核</el-button>
@@ -43,29 +24,49 @@
 
     <pagination v-show="total > 0" :total="total" :page.sync="pageNum" :limit.sync="pageSize" />
 
-    <el-dialog :visible="dialogVisible" title="倾听者审核" :show-close="true" @close="closeDialog">
-      <div><el-button @click="startVerify">开始审核</el-button> </div>
+    <el-dialog v-model="dialogVisible" title="倾听者审核" :show-close="true" @close="closeDialog">
+      <div><el-button @click="startVerify" v-show="showstartverify">开始审核</el-button> </div>
       <p></p>
       <div v-show="showcheckcardlayout"> {{ checkcardResult }} </div>
       <div v-show="showcheckphonecard"> {{ checkcardPhoneResult }} </div>
-      <div v-show="showpassmsg"> {{ passmsg }} </div>
+      <div v-show="showpassmsg" style="color: green;"> {{ passmsg }} </div>
 
       <p></p>
-      <div><el-button v-show="showspassbtn" @click="mverifySuccess">确认审核通过</el-button></div>
-     <div><el-button v-show="showfailbtn">审核不通过</el-button></div> 
-
+      <div> 该用户相关资质 </div>
+      <div style="font-size: 12px;color: red;"> 如果上传了资质，则查验资质真伪，无效资质需删除 </div>
  
+      <div>
+        <ImageDeleteList :images="images" :width="500" ref="imageList" @delete-image="handleDeleteImage" />
+      </div>
+
+      <div style="display: flex; flex-direction: row;">
+        <div><el-button v-show="showspassbtn" @click="mverifySuccess">通过</el-button></div>
+        <div style="width: 20px;"></div>
+      <div><el-button  v-show="showfailbtn" @click="mrefuseRequestListener">不通过</el-button></div>
+
+      </div>
+
+      
+
     </el-dialog>
   </div>
 </template>
 
 <script>
-import { getWaiting4ReviewListener, passRequestListener, verifyIdCard, verifyIdCardPhone,verifySuccess } from "@/api/compliance/listener";
+import { getWaiting4ReviewListener, verifyFail, verifySuccess, verifyIdCard, verifyIdCardPhone } from "@/api/compliance/listener";
+import { formatTimestamp, formatTimestampYMDHS } from '@/utils/dateutil.js';
+import { getWaittingVerify, getCredential, deleteCredential } from "@/api/userinfo/updateuserinfo";
+import ImageDeleteList from '@/components/custom/ImageDeleteList.vue';
+
 
 export default {
+  components: { ImageDeleteList },
+  inject: ['global'],
+
   name: "Online",
   data() {
     return {
+      showstartverify: true,
       currentRow: {},
       dialogVisible: false,
       checkcardloading: false,
@@ -73,10 +74,10 @@ export default {
       checkcardButtonMsg: "",
       checkcardPhoneResult: "",
       showcheckcardlayout: false,
-      showspassbtn:false,
-      showfailbtn:false,
-      showpassmsg:false,
-      passmsg:"",
+      showspassbtn: false,
+      showfailbtn: false,
+      showpassmsg: false,
+      passmsg: "",
 
       showcheckphonecard: false,
 
@@ -99,6 +100,10 @@ export default {
     this.getList();
   },
   methods: {
+    mformatTimestamp(timestamp) {
+
+      return formatTimestamp(timestamp)
+    },
     openDialog(row) {
       this.currentRow = row;
       this.dialogVisible = true;
@@ -116,13 +121,14 @@ export default {
       this.checkcardResult = "";
       this.checkcardButtonMsg = "";
       this.checkcardPhoneResult = "";
-      this.showcheckcardlayout=false;
-      this.showspassbtn=false;
-      this.showfailbtn=false;
-      this.showcheckphonecard= false;
-      this.showpassmsg=false;
-      this.passmsg="";
- 
+      this.showcheckcardlayout = false;
+      this.showspassbtn = false;
+      this.showfailbtn = false;
+      this.showcheckphonecard = false;
+      this.showpassmsg = false;
+      this.passmsg = "";
+      this.images = [];
+
 
     },
 
@@ -145,6 +151,47 @@ export default {
         this.loading = false;
       });
     },
+    handleDeleteImage(index) {
+      // 在这里处理删除图片的逻辑
+      // this.images.splice(index, 1);
+      // this.$refs.imageList.$forceUpdate(); 
+      //mdeleteCredential(this.images[index]);
+      var img = this.images[index];
+      console.log(img.idData);
+      var queryParams = {
+        'token': this.global.token,
+        'uid': this.global.uid,
+        'targetUid': 0,
+        'picId': img.idData
+      }
+      deleteCredential(queryParams).then(value => {
+        if (value.errorCode == 0) {
+          if (value.data == 1) {
+            var index = this.images.indexOf(img);
+            this.images.splice(index, 1);
+            this.$refs.imageList.$forceUpdate();
+          }
+        }
+      })
+    },
+    mgetCredential(targetUid) {
+      var queryParams = {
+        'token': this.global.token,
+        'uid': this.global.uid,
+        'targetUid': targetUid
+      }
+      getCredential(queryParams).then(imgs => {
+        this.images = []
+        console.log(imgs.length)
+
+        for (var i = 0; i < imgs.length; i++) {
+          console.log(imgs[i]);
+
+          this.images[i] = imgs[i];
+        }
+      })
+    },
+
     startVerify() {
       this.showcheckcardlayout = true;
       this.checkcardloading = true;
@@ -155,20 +202,29 @@ export default {
         if (value.errorCode != 0) {
           this.checkcardloading = false;
           this.checkcardResult = value.errorMsg + "!!!";
-          this.showfailbtn=true;
+          this.showfailbtn =false;
+          this.showstartverify = false;
+          
+          let index = this.list.indexOf(this.currentRow); // 查找元素的索引
+            if (index !== -1) {
+              this.list.splice(index, 1); // 从索引位置删除1个元素
+            }
 
         } else {
-          this.checkcardResult ="身份证检查通过"
-          this.checkcardPhoneResult="正在检查手机号三要素..."
-          this.showcheckcardPhonelayout=true;
-          this.showcheckphonecard=true;
+
+          this.mgetCredential(this.currentRow.uid);
+          var json = JSON.parse(value.data);
+          this.checkcardResult = json.name + " " + json.idNum + " " + json.birth + " " + json.address
+          this.checkcardPhoneResult = "正在检查手机号三要素..."
+          this.showcheckcardPhonelayout = true;
+          this.showcheckphonecard = true;
           verifyIdCardPhone(this.currentRow.idData).then(value => {
             if (value.errorCode != 0) {
-               this.checkcardPhoneResult = value.errorMsg + "!!!";
-               this.showfailbtn=true;
-            }else{
-               this.checkcardPhoneResult ="手机号三要素检查通过" ;
-               this.showspassbtn=true;
+              this.checkcardPhoneResult = value.errorMsg + "!!!";
+            } else {
+              this.checkcardPhoneResult = "手机号三要素检查通过";
+              this.showspassbtn = true;
+              this.showfailbtn =true;
 
 
             }
@@ -180,22 +236,28 @@ export default {
       //检查手机号三要素
 
     },
-    mverifySuccess(){
-      verifySuccess(this.currentRow.idData).then(value=>{
-        if(value.errorCode==0){
+    mverifySuccess() {
+      verifySuccess(this.currentRow.idData).then(value => {
+        if (value.errorCode == 0) {
 
           console.log('来来来');
           let index = this.list.indexOf(this.currentRow); // 查找元素的索引
           if (index !== -1) {
             this.list.splice(index, 1); // 从索引位置删除1个元素
           }
-          this.passmsg="已完成审核，审核通过";
-          this.showpassmsg=true;
-          this.showspassbtn=false;
+          this.passmsg = "已完成审核，审核通过";
+          this.showpassmsg = true;
+          this.showspassbtn = false;
+          this.showfailbtn=false;
+          this.showstartverify=false;
+          this.closeDialog();
+          
 
 
-        }else{
+        } else {
           alert(value.errorMsg)
+          
+
         }
       })
     },
@@ -211,7 +273,7 @@ export default {
     },
 
     /** 审核不通过 */
-    mrefuseRequestListener(row) {
+    mrefuseRequestListener() {
       this.$prompt('请输入未通过审核意见', '审核未通过', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
@@ -219,12 +281,13 @@ export default {
         inputErrorMessage: '请输入未通过审核意见'
       }).then(({ value }) => {
 
-        passRequestListener(row.idData, value).then((value) => {
+        verifyFail(this.currentRow.idData, value).then((value) => {
           if (value['errorCode'] == 0) {
-            let index = this.list.indexOf(row); // 查找元素的索引
+            let index = this.list.indexOf(this.currentRow); // 查找元素的索引
             if (index !== -1) {
               this.list.splice(index, 1); // 从索引位置删除1个元素
             }
+            this.closeDialog();
 
 
           } else {
@@ -241,46 +304,10 @@ export default {
       });
 
 
-      // this.$modal.confirm('审核不通过？').then(function () {
-      //   console.log("??:" + JSON.stringify(row));
-      //   return refuseRequestListener(row.idData, "测试")
-      // }).then((value) => {
-      //   if (value['errorCode'] == 0) {
-      //     let index = this.list.indexOf(row); // 查找元素的索引
-      //     if (index !== -1) {
-      //       this.list.splice(index, 1); // 从索引位置删除1个元素
-      //     }
 
-
-      //   } else {
-      //     alert('操作失败' + value['errorCode']);
-
-      //   }
-      // }).catch(() => { });
-    },
-    /**
-     * 
-     *审核通过
-     */
-    mpassRequestListener(row) {
-      this.$modal.confirm('确认审核通过？').then(function () {
-        return passRequestListener(row.idData)
-      }).then((value) => {
-        if (value['errorCode'] == 0) {
-          let index = this.list.indexOf(row); // 查找元素的索引
-          if (index !== -1) {
-            this.list.splice(index, 1); // 从索引位置删除1个元素
-          }
-
-
-        } else {
-          alert('操作失败' + value['errorCode']);
-
-        }
-      }).catch(() => { });
     }
-
   }
-};
+
+} 
 </script>
 
