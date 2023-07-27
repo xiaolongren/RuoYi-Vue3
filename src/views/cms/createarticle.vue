@@ -17,6 +17,16 @@
         </div>
         <!-- 中间 -->
         <div style="display: flex;flex-direction: column;margin-left: 16px;;margin-top: 40px;">
+
+            <el-checkbox v-model="isTimeChecked" @change="handleCheckChange">
+                定时发布
+            </el-checkbox>
+            <el-date-picker v-model="time" type="datetime" placeholder="选择日期时间" :picker-options="pickerOptions">
+            </el-date-picker>
+
+
+            <p>目前只有定时发布,才会有消息推送</p>
+
             <div class="coverdiv" @click="selectCover">
                 <input style="z-index: -2;width: 210px;height: 140px; visibility: hidden;" class="hidden" id="input"
                     type="file" accept="image/*" @change="previewFiles($event)">
@@ -33,12 +43,9 @@
                 </div>
 
             </div>
-            <p style="font-size: 10px;"> 封面图片最佳尺寸600x400(长宽度比3:2)
+            <p style="font-size: 10px;"> 封面图片最佳尺寸920x400(长宽度比2.3:1)
             </p>
             <el-icon style="font-size: 12px;" name="el-icon-plus"></el-icon>
-
-
-
 
             <el-button type="primary" style="margin-top: 16px
                                             ; width: 210px;" @click="submitarticle">提交</el-button>
@@ -81,9 +88,9 @@
 import '@wangeditor/editor/dist/css/style.css' // 引入 css
 import { createEditor, DomEditor } from '@wangeditor/editor'
 import httpRequest from '@/store/maxios.js'
-import { formatTimestamp ,formatTimestampYMDHS} from '@/utils/dateutil.js';
+import { formatTimestamp, formatTimestampYMDHS } from '@/utils/dateutil.js';
 
-import { onBeforeUnmount, ref, shallowRef, onMounted, render } from 'vue'
+import { onBeforeUnmount, ref, shallowRef, onMounted, render, watch } from 'vue'
 import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
 import COS from 'cos-js-sdk-v5';
 
@@ -140,15 +147,47 @@ export default {
             }
         });
         var coverUrl = null
+        var isTimeChecked = ref(false)
+        var time = ref(new Date(Date.now() + 15 * 60 * 1000))
         var ariticle = {}
         var Pic = {}
         var PICS = []
         var picMap = new Map
         var CoverPic = {}
+        var publishTime = 0
+        const pickerOptions = ref({});
+
+
+
+
+        watchEffect(() => {
+            updatePickerOptions(time.value);
+        });
+
+        function updatePickerOptions(selectedTime) {
+            // 获取当前时间
+            const now = new Date();
+
+            // 设置最小时间为当前时间+15分钟
+            const minDateTime = new Date(now.getTime() + 15 * 60 * 1000);
+
+            // 设置最大时间为当前时间+7天
+            const maxDateTime = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+            pickerOptions.value = {
+                disabledDate(time) {
+                    return time.getTime() < minDateTime.getTime() || time.getTime() > maxDateTime.getTime();
+                },
+            };
+        }
+
+
         const contentPicUploadCallback = (data, insertImgFn) => {
             var filetype = getFileType(data.Location)
-            var url = data.Location.replace("xiyou-1314793197.cos.ap-guangzhou.myqcloud.com", "https://pic.xiyouqingsu.com").replace("." + filetype, ".webp")
-            console.log("url:" + url);
+
+            var url = data.Location.replace("xiyou-1314793197.cos.ap-guangzhou.myqcloud.com", "https://pic.xiyouqingsu.com");
+            url = url.replace("." + filetype, ".webp")
+            console.log("url:" + url + "  " + filetype);
             insertImgFn(url); // 插入返回的url地址
             //获取图片尺寸
             getPicSize(url).then(res => {
@@ -194,6 +233,7 @@ export default {
 
             });
         }
+
         const uploadCover = (file) => {
 
 
@@ -214,27 +254,56 @@ export default {
                 // pic["url"] = 
                 //  var coverUrl = data.Location.replace("xiyou-1314793197.cos.ap-guangzhou.myqcloud.com", "https://pic.xiyouqingsu.com")
                 var filetype = getFileType(data.Location)
-                var coverUrl = data.Location.replace("xiyou-1314793197.cos.ap-guangzhou.myqcloud.com", "https://pic.xiyouqingsu.com").replace("." + filetype, ".webp")
+                var coverUrl = data.Location.replace("xiyou-1314793197.cos.ap-guangzhou.myqcloud.com", "https://pic.xiyouqingsu.com")
+                console.log("第一次替换：" + coverUrl)
 
-                console.log(coverUrl)
-                //获取图片尺寸
-                getPicSize(coverUrl).then(res => {
-                    console.log(res);
-                    var width = res.width
-                    var height = res.height
+                coverUrl = coverUrl.replace("." + filetype, ".webp");
+                console.log("第二次替换：" + coverUrl)
 
-                    CoverPic["url"] = coverUrl
-                    CoverPic["width"] = width
-                    CoverPic["height"] = height
-                    //PicEnum.ARTICLE
-                    CoverPic["type"] = 7
-                    console.log("封面图" + JSON.stringify(CoverPic))
+                console.log("上传封面结束=====" + coverUrl + "   " + filetype)
+                console.log("回来的data" + data.Location)
+                // setTimeout(getPicSize(coverUrl), 1000); // 延迟1秒执行
+                setTimeout(() => {
+                    new Promise(resolve => {
+                        resolve(getPicSize(coverUrl));
+                    }).then(res => {
+                        // 处理结果
+                        console.log(res);
+                        var width = res.width
+                        var height = res.height
+
+                        CoverPic["url"] = coverUrl
+                        CoverPic["width"] = width
+                        CoverPic["height"] = height
+                        //PicEnum.ARTICLE
+                        CoverPic["type"] = 7
+                        console.log("封面图" + JSON.stringify(CoverPic))
+                    }, reson => {
+
+                        console.log(reson)
+                    });
+                }, 2000);
+
+
+                // //获取图片尺寸
+                // getPicSize(coverUrl).then(res => {
+                //     console.log(res);
+                //     var width = res.width
+                //     var height = res.height
+
+                //     CoverPic["url"] = coverUrl
+                //     CoverPic["width"] = width
+                //     CoverPic["height"] = height
+                //     //PicEnum.ARTICLE
+                //     CoverPic["type"] = 7
+                //     console.log("封面图" + JSON.stringify(CoverPic))
 
 
 
-                }, reason => {
-                    console.error(reason);
-                })
+                // }, reason => {
+                //     console.log("获取尺寸出错："+reason);
+                //     console.error(reason);
+                // })
 
 
             });
@@ -386,6 +455,10 @@ export default {
 
             //  this.editorContent=value.getHtml();
         }
+        const handleCheckChange = (checked) => {
+
+            isTimeChecked.value = checked
+        }
 
         //选择封面
         const previewFiles = (e) => {
@@ -403,6 +476,7 @@ export default {
 
 
 
+                console.log("上传封面开始=====")
                 uploadCover(file)
             };
 
@@ -436,7 +510,15 @@ export default {
                 alert("文章内容太短")
                 return
             }
+            if (isTimeChecked.value) {
+                if (time.value == null) {
+                    alert("请选择发布时间")
+                } else {
+                    publishTime = time.value.getTime();
+                }
+            }
 
+            console.log(publishTime);
             var title = document.getElementById('tvtitle').value;
             ariticle["title"] = title
             ariticle["content"] = content
@@ -484,6 +566,8 @@ export default {
             var form = new FormData();
             form.append("uid", global.uid)
             form.append("token", global.token)
+            if (publishTime > 0)
+                form.append("publishTime", publishTime)
             form.append("articleJson", JSON.stringify(ariticle))
             var url = "/content/article/createArticle"
             const config = {
@@ -531,7 +615,10 @@ export default {
             previewFiles,
             onchange,
             centerDialogVisible,
-
+            isTimeChecked,
+            time,
+            handleCheckChange,
+            pickerOptions,
 
         };
     }
@@ -547,10 +634,12 @@ export default {
             cos: null,
             mvisible: false,
             mtitle: "",
+
         }
 
     },
     methods: {
+
 
         handleTitleInput(ev) {
             console.log(ev.target.value);
@@ -577,6 +666,15 @@ export default {
             // xmlrequest.send("uid=377&token=c2d2a2dc65a709d5bfd755bfc66917ec")
             document.getElementById("input").click();
 
+        },
+        onDirectPublishSelected() {
+            alert('onDirectPublishSelected');
+            this.publishType = "direct";
+        },
+        ontimingPublishSelected() {
+            alert('ontimingPublishSelected');
+
+            this.publishType = "timing";
         }
 
     }

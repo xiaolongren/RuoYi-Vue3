@@ -44,7 +44,7 @@ import TreeSelect from '@/components/TreeSelect'
 import DictTag from '@/components/DictTag'
 const global = {
   uid:383,
-  token:"cef311957a64f9268f54fdfe59f0dbe7"
+  token:"4c9fc6597e9e087ab384ca2a2d65b24e"
  
 };
 //
