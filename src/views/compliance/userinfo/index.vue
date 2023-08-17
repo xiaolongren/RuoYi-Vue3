@@ -194,7 +194,7 @@ export default {
      */
     mupdateUserInfoSuccess() {
 
-      this.$modal.confirm('确定要删除该条记录吗?').then(() => {
+      this.$modal.confirm('确定要审核通过吗?').then(() => {
         // 确认删除操作
         var query = {
           'id': this.currentData.idData,
