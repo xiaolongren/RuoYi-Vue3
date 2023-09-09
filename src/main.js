@@ -43,8 +43,8 @@ import TreeSelect from '@/components/TreeSelect'
 // 字典标签组件
 import DictTag from '@/components/DictTag'
 const global = {
-  uid:383,
-  token:"4c9fc6597e9e087ab384ca2a2d65b24e"
+  uid:418,
+  token:"034a82689f3731632ab2cdc084032ca9"
  
 };
 //

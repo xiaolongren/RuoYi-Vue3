@@ -9,10 +9,11 @@ export function getcomplaints(page,uid,token) {
   }
   //    public Result DoneComplaints(@RequestParam int isReportApproved,@RequestParam String id,@RequestParam String reporterMsg,@RequestParam String reportedMsg,@RequestParam String token,@RequestParam String uid ){
 
-  export function donecomplaints(isReportApproved,id,token,uid,reportedMsg,reporterMsg) {
+  export function donecomplaints(isReportApproved,id,token,uid,reportedMsg,reporterMsg,deleteContent) {
+    alert(isReportApproved+" "+id+" "+deleteContent)
     return request({
       url: '/cms/complain/doneComplaints',
       method: 'post',
-      params: {'uid':uid,'token':token,'isReportApproved':isReportApproved,'reportedMsg':reportedMsg,'reporterMsg':reporterMsg}
+      params: {'uid':uid,'token':token,'isReportApproved':isReportApproved,'reportedMsg':reportedMsg,'reporterMsg':reporterMsg,'deleteContent':deleteContent,'id':id}
     })
   }

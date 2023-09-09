@@ -32,22 +32,28 @@
       <el-table-column label="被举报用户" align="center" prop="beComplaintedUser.nick" :show-overflow-tooltip="true" />
       <el-table-column label="被举报用户Id" align="center" prop="beComplaintedUser.idData" :show-overflow-tooltip="true" />
 
-      <el-table-column label="举报内容" align="center" prop="content" :show-overflow-tooltip="true" />
-      <el-table-column label="图片" align="center" >
+      <el-table-column label="举报类型" align="center">
         <template v-slot="{ row }">
-      <img v-if="row.pics" :src="getFirstPic(row.pics)" alt="Image" height="40" width="40" @click="clickimg(row.pics)" />
-    </template>
+          {{ getTypeTitle(row) }}
+        </template>
+      </el-table-column>
+      <el-table-column label="举报原因" align="center" prop="content" :show-overflow-tooltip="true" />
+      <el-table-column label="举证" align="center">
+        <template v-slot="{ row }">
+          <img v-if="row.pics" :src="getFirstPic(row.pics)" alt="Image" height="40" width="40"
+            @click="clickimg(row.pics)" />
+        </template>
       </el-table-column>
       <el-table-column label="时间" align="center" :show-overflow-tooltip="true">
-                <template v-slot="scope">
-                    {{ mformatTimestamp(scope.row.createTime) }}
-                </template>
-            </el-table-column>
+        <template v-slot="scope">
+          {{ mformatTimestamp(scope.row.createTime) }}
+        </template>
+      </el-table-column>
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
         <template v-slot="scope">
-          <el-button size="mini" type="text" @click="mpassRequestListener(scope.row)">审核</el-button>
 
-          <el-button size="mini" type="text" @click="mrefuseRequestListener(scope.row)">不通过</el-button>
+          <el-button size="mini" type="text" @click="process(scope.row)">处理</el-button>
+
         </template>
       </el-table-column>
     </el-table>
@@ -55,24 +61,45 @@
     <pagination v-show="total > 0" :total="total" :page.sync="pageNum" :limit.sync="pageSize" />
 
 
-      <el-dialog v-model="dialogVisible" title="证据截图" :show-close="true" @close="closeDialog">
-         
-            <div>
-                <ImageList :images="imageUrls" :width="500" />
-                
-            </div>
+    <el-dialog v-model="dialogVisible" title="证据截图" :show-close="true" @close="closeDialog">
+      <div>
+        <ImageList :images="imageUrls" :width="500" />
 
-            <p></p>
+      </div>
+      <p></p>
 
+    </el-dialog>
+    <el-dialog v-model="processdialogVisible" title="处理举报" :show-close="true" @close="closeDialog" :lock-scroll="false">
+      <div>
 
-        </el-dialog>
+        <el-checkbox v-model="isDeleteChecked" v-if="this.processRow.type == 2">删除内容</el-checkbox>
+        <el-checkbox v-model="isPassedChecked">举报通过</el-checkbox>
+
+        <p></p> <p></p>
+        <div>
+         回复举报者  <p></p>
+         <el-input v-model="reportermsg" :rows="2" type="textarea" placeholder="Please input" ></el-input>
+
+        </div>
+        <p></p>
+        <p></p>
+        <div v-if="isPassedChecked">
+         回复举被报者
+         <p></p>
+          <el-input v-model="reportedmsg" :rows="2" type="textarea" placeholder="Please input" ></el-input>
+
+        </div>      </div>
+      <p></p>
+<el-button @click="submit">提交</el-button>
+    </el-dialog>
+   
   </div>
 </template>
 
 <script>
-import { donecomplaints, getcomplaints } from "@/api/compliance/complaint";
- import { formatTimestamp ,formatTimestampYMDHS} from '@/utils/dateutil.js';
- import ImageList from '@/components/ImageList.vue';
+import { donecomplaints, getcomplaints } from "@/api/compliance/complaint.js";
+import { formatTimestamp, formatTimestampYMDHS } from '@/utils/dateutil.js';
+import ImageList from '@/components/ImageList.vue';
 
 export default {
   inject: ['global'],
@@ -82,16 +109,23 @@ export default {
   name: "Online",
   data() {
     return {
+      reportermsg: "",
+      reportedmsg: "",
+      isPassedChecked: false,
+      isDeleteChecked: false,
       // 遮罩层
       loading: true,
       // 总条数
       total: 0,
       // 表格数据
       list: [],
-      imageUrls:[],
+      imageUrls: [],
       pageNum: 1,
       pageSize: 10,
-      dialogVisible:false,
+      dialogVisible: false,
+      userdialogVisible: false,
+      processdialogVisible: false,
+      processRow: null,
       // 查询参数
       queryParams: {
         page: 1,
@@ -106,8 +140,46 @@ export default {
     /** 查询登录日志列表 */
     mformatTimestamp(timestamp) {
 
-return formatTimestamp(timestamp)
-},
+      return formatTimestamp(timestamp)
+    },
+    submit(){
+      if(this.reportedmsg){
+        if(this.reportedmsg.length<10){
+          alert("请输入不少于10字的回复举报者的内容");
+          return ;
+        }
+      }
+      if(this.isPassedChecked){
+        if(this.reportedmsg.length<10){
+          alert("请输入不少于10字的回复被举报者的内容");
+          return ;
+        }
+      }
+      this.loading = true;
+
+      //isReportApproved,id,token,uid,reportedMsg,reporterMsg
+      donecomplaints(this.isPassedChecked?1:0,this.processRow.idData,this.global.token,this.global.uid,this.reportedmsg,this.reportermsg,this.isDeleteChecked?1:0).then(response=>{
+        this.loading = false;
+        if (value['errorCode'] == 0) {
+            let index = this.list.indexOf(row); // 查找元素的索引
+            if (index !== -1) {
+              this.list.splice(index, 1); // 从索引位置删除1个元素
+            }
+
+
+          } else {
+            alert('操作失败' + value['errorCode']);
+
+          }
+
+      }).catch(error => {
+        console.error('发生错误:', error);
+        this.list = [];
+        this.total = 0;
+        this.loading = false;
+      });
+
+    },
     getList() {
       this.loading = true;
       //page,uid,token
@@ -138,14 +210,26 @@ return formatTimestamp(timestamp)
       this.resetForm("queryForm");
       this.handleQuery();
     },
-    clickimg(imgs){
-      var arr=JSON.parse(imgs);
-        this.imageUrls=[];
-       for (var i = 0; i < arr.length; i++) {
-          this.imageUrls[i] = arr[i];
-        }
-       console.log('ulr::::'+this.imageUrls[0]);
-       this.dialogVisible=true;
+    clickimg(imgs) {
+      var arr = JSON.parse(imgs);
+      this.imageUrls = [];
+      for (var i = 0; i < arr.length; i++) {
+        this.imageUrls[i] = arr[i];
+      }
+      console.log('ulr::::' + this.imageUrls[0]);
+      this.dialogVisible = true;
+
+    },
+    getTypeTitle(row) {
+
+      if (row.type == 1) {
+        return "用户";
+      }
+      return "内容";
+    },
+    process(row) {
+      this.processRow = row;
+      this.processdialogVisible = true;
 
     },
     /** 审核不通过 */
@@ -196,11 +280,11 @@ return formatTimestamp(timestamp)
       //   }
       // }).catch(() => { });
     },
-    getFirstPic(pic){
+    getFirstPic(pic) {
 
       return JSON.parse(pic)[0];
     },
-    parseimgs(pic){
+    parseimgs(pic) {
       return JSON.parse(pic);
     },
     /**
