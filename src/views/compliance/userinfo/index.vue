@@ -38,6 +38,12 @@
       <div> 更新类型: {{ currentData.showTitle }} </div>
       <p></p>
       <div> 更新内容 :{{ currentData.showContent }} </div>
+      <div v-if="currentData.avatarPic!=null">
+      <img :src="currentData.avatarPic.url" style="width: 100px; height: 100px;" />
+
+
+      <div>currentData.avatarPic.url</div>
+      </div>
       <p></p>
       <div> 该用户相关资质 </div>
       <div style="font-size: 12px;color: red;"> *昵称/个人介绍/欢迎语中如果涉及相关专业性的职称等，需要提供相关资质证明 </div>
