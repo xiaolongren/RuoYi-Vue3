@@ -122,7 +122,7 @@ export default {
 
                 var url = 'https://app.xiyouqingsu.com/content/media/auth/getTencentOssToken?bucket=' + Bucket + "&uid=" + global.uid + "&token=" + global.token; // url 替换成您自己的后端服务
                 var xhr = new XMLHttpRequest();
-                xhr.withCredentials=true;
+                xhr.withCredentials=false;
                 xhr.open('GET', url, true);
                 //Access-Control-Allow-Origin
                 
