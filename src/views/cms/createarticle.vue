@@ -26,7 +26,15 @@
 
 
             <p>目前只有定时发布,才会有消息推送</p>
-
+            <div>关键词以,分割，吐给搜索引擎使用</div>
+            <input id="keyWords" ref="keyWordsInput" />
+            <p></p>
+            <div>父标签：婚姻家庭、情感、情绪管理</div>
+            <input id="groupTag"  ref="groupTagInput" />
+            <p></p>
+            <div>子标签</div>
+            <input id="tag"  ref="tagInput" />
+            <p></p>
             <div class="coverdiv" @click="selectCover">
                 <input style="z-index: -2;width: 210px;height: 140px; visibility: hidden;" class="hidden" id="input"
                     type="file" accept="image/*" @change="previewFiles($event)">
@@ -160,6 +168,9 @@ export default {
         var publishTime = 0
         const pickerOptions = ref({});
 
+        const tagInput = ref(null);
+    const groupTagInput = ref(null);
+    const keyWordsInput = ref(null);
 
 
 
@@ -526,6 +537,11 @@ export default {
             ariticle["title"] = title
             ariticle["content"] = content
 
+         
+
+             ariticle["tag"] = tagInput.value.value;
+    ariticle["tagGroup"] = groupTagInput.value.value;
+    ariticle["keyWords"] = keyWordsInput.value.value;
 
             //从html中解析img，过滤掉picMap被删除的pic
 
@@ -602,6 +618,9 @@ export default {
         }
 
         return {
+            tagInput,
+        groupTagInput,
+        keyWordsInput,
             resetData,
             publishResult,
             editorContent,
