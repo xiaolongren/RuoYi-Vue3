@@ -1,5 +1,5 @@
 export function formatTimestamp(timestamp) {
-
+console.log('shijian:'+timestamp);
   const date = new Date(timestamp);
 
   const year = date.getFullYear();
