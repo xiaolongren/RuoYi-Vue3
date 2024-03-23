@@ -28,6 +28,11 @@ export default {
       // 触发自定义事件并传递数据
       this.$emit('delete-image', index);
     },
+    mounted(){
+      this.images.forEach(element => {
+        console.log('循环'+element.url);
+      });
+    }
   },
 };
 </script>
