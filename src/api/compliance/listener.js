@@ -51,3 +51,25 @@ export function verifySuccess(listenerRequestId){
     params: {'listenerRequestId':listenerRequestId}
   })
 }
+export function getWaiting4ReviewTraining(){
+
+  return request({
+    url: '/compliance/listener/getWaiting4ReviewTraining',
+    method: 'get',
+    params: {}
+  })
+}
+export function trainingverifySuccess(trainingId,uid,token){
+  return request({
+    url: '/compliance/listener/trainingverifySuccess',
+    method: 'get',
+    params: {'trainingId':trainingId,'token':token,'uid':uid}
+  })
+}
+export function trainingverifyFail(trainingId,msg,uid,token){
+  return request({
+    url: '/compliance/listener/reviewFailTraining',
+    method: 'get',
+    params:{'trainingId':trainingId+"",'msg':msg,'token':token,'uid':uid}
+  })
+}
