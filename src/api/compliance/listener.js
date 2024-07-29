@@ -73,3 +73,33 @@ export function trainingverifyFail(trainingId,msg,uid,token){
     params:{'trainingId':trainingId+"",'msg':msg,'token':token,'uid':uid}
   })
 }
+/**
+ * 获取等待审核的经验时长申请
+ * @param {*} uid 
+ * @param {*} token 
+ * @returns 
+ */
+ 
+export function getWaiting4ReviewThirdHours(uid,token){
+  return request({
+    url: '/compliance/listener/getWaiting4ReviewThirdHours',
+    method: 'get',
+    params:{'token':token,'uid':uid}
+  })
+}
+ /**
+ * 经验时长审核
+ * @param {*} success 
+ * @param {*} idstr 
+ * @param {*} failMsg 
+ * @param {*} token 
+ *  
+ * @returns 
+ */
+export function verifyResultThirdHours(success,idstr,failMsg,hours,uid,token){
+  return request({
+    url: '/compliance/listener/verifyResultThirdHours',
+    method: 'post',
+    params:{'hours':hours,'id':idstr,'success':success,'failMsg':failMsg,'token':token,'uid':uid}
+  })
+}
